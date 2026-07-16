@@ -10,7 +10,7 @@ Python · C · PostgreSQL · NumPy/Pandas · PyQt5 ·
 
 ## Cursos
 
-- **EDA** — Estructuras de Datos y Algoritmos (*WIP*)
+- **EDD** — Estructuras de Datos y Algoritmos (*WIP*)
 - **IIC2413** — Bases de Datos
 - **IIC2233** — Programación Avanzada
 - **IIC2713** — Inteligencia Artificial
