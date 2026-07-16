@@ -1,8 +1,4 @@
 ## integrantes:
-- **André Angulo** ✨  -2421003j
-- **Fernanda Miranda** ✨ -24209716
-- **Catalina Reyes** ✨ -24645516
-
 # Version POSTGRESQL
 
 Se utilizo la versión 18.3 de PostgreSQL para el desarrollo de esta tarea. Es importante asegurarse de tener esta versión o una compatible para evitar problemas de compatibilidad con las funciones y características utilizadas en los scripts SQL proporcionados.
