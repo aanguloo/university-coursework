@@ -1,0 +1,41 @@
+# --- LaTeX ---
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.pdf
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.ipynb_checkpoints/
+
+# --- C ---
+*.o
+*.out
+*.exe
+a.out
+
+# --- Datos pesados / generados ---
+*.csv
+!**/sample_data/*.csv
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Otros ---
+*.zip
+*.log
