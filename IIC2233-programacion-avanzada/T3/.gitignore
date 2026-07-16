@@ -1,0 +1,10 @@
+env/
+
+*.csv
+*.txt
+*.zip
+tests_publicos/
+data/
+utilidades.pyc
+backend/utilidades.pyc
+README_inicial.md

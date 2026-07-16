@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sponsors</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <span>🎮 TorneoApp</span>
+  <a href="index.html">Torneos</a>
+  <a href="stats.html">Estadísticas</a>
+  <a href="search.html">Búsqueda</a>
+  <a href="sponsors.html" class="active">Sponsors</a>
+  <a href="inscripcion.html">Inscripción</a>
+</nav>
+
+<div class="container">
+  <h1>💼 Sponsors por Videojuego</h1>
+  <p style="color:#9ca3af; margin-bottom:20px">Sponsors que auspiciaron <strong>todos</strong> los torneos del videojuego seleccionado.</p>
+
+  <div class="form-group">
+    <label>Selecciona un videojuego:</label>
+    <select id="sel-juego" onchange="cargarSponsors()">
+      <option value="">-- Elige un videojuego --</option>
+    </select>
+  </div>
+
+  <div id="resultados"></div>
+</div>
+
+<script>
+  let autoRefreshActivo = false;
+
+  async function init() {
+    const res = await fetch('/api/videojuegos');
+    const juegos = await res.json();
+    const sel = document.getElementById('sel-juego');
+    juegos.forEach(j => {
+      const opt = document.createElement('option');
+      opt.value = j.videojuego;
+      opt.textContent = j.videojuego;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function cargarSponsors() {
+    const juego = document.getElementById('sel-juego').value;
+    const div = document.getElementById('resultados');
+    if (!juego) { div.innerHTML = ''; return; }
+
+    const res = await fetch(`/api/sponsors?videojuego=${encodeURIComponent(juego)}`);
+    const sponsors = await res.json();
+
+    if (sponsors.length === 0) {
+      div.innerHTML = '<p class="empty">Ningún sponsor auspició todos los torneos de este videojuego.</p>';
+      return;
+    }
+
+    div.innerHTML = `
+      <table>
+        <thead><tr><th>Sponsor</th><th>Industria</th><th>Monto total aportado</th></tr></thead>
+        <tbody>${sponsors.map(s => `
+          <tr>
+            <td>${s.nombre}</td>
+            <td>${s.industria}</td>
+            <td>$${Number(s.monto_total).toLocaleString()}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+  }
+
+  function iniciarAutoRefresh() {
+    if (autoRefreshActivo) return;
+    autoRefreshActivo = true;
+
+    setInterval(() => {
+      if (document.hidden) return;
+      if (document.getElementById('sel-juego').value) {
+        cargarSponsors();
+      }
+    }, 10000);
+  }
+
+  init();
+  iniciarAutoRefresh();
+</script>
+</body>
+</html>

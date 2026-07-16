@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Torneos</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <span>🎮 TorneoApp</span>
+  <a href="index.html" class="active">Torneos</a>
+  <a href="stats.html">Estadísticas</a>
+  <a href="search.html">Búsqueda</a>
+  <a href="sponsors.html">Sponsors</a>
+  <a href="inscripcion.html">Inscripción</a>
+</nav>
+
+<div class="container">
+  <!-- VISTA: LISTA DE TORNEOS -->
+  <div id="vista-lista">
+    <h1>🏆 Torneos</h1>
+    <div id="lista-torneos">
+      <p class="empty">Cargando torneos...</p>
+    </div>
+  </div>
+
+  <!-- VISTA: DETALLE DE UN TORNEO -->
+  <div id="vista-detalle" style="display:none">
+    <button class="back-btn" onclick="volverLista()">← Volver</button>
+    <h1 id="torneo-titulo"></h1>
+
+    <h2>📊 Tabla de posiciones (Fase de Grupos)</h2>
+    <div id="tabla-posiciones"></div>
+
+    <h2>⚔️ Partidas</h2>
+    <div id="lista-partidas"></div>
+
+    <h2>👥 Equipos inscritos</h2>
+    <div id="lista-equipos"></div>
+
+    <h2>💼 Sponsors</h2>
+    <div id="lista-sponsors"></div>
+  </div>
+</div>
+
+<script>
+  let torneoActual = null;
+  let autoRefreshActivo = false;
+
+  function formatearFechaHora(valor) {
+    if (!valor) return '—';
+
+    const texto = String(valor);
+    const fecha = new Date(texto);
+    if (!Number.isNaN(fecha.getTime())) {
+      return fecha.toLocaleString('es-CL');
+    }
+
+    // PostgreSQL time with time zone suele llegar como HH:mm:ss±HH, sin fecha.
+    const matchHora = texto.match(/^(\d{2}:\d{2}:\d{2})([+-]\d{2})$/);
+    if (matchHora) {
+      return `${matchHora[1]} GMT${matchHora[2]}`;
+    }
+
+    return texto;
+  }
+
+  function iniciarAutoRefresh() {
+    if (autoRefreshActivo) return;
+    autoRefreshActivo = true;
+
+    setInterval(() => {
+      if (document.hidden) return;
+
+      if (document.getElementById('vista-detalle').style.display === 'block' && torneoActual) {
+        verDetalle(torneoActual, document.getElementById('torneo-titulo').textContent);
+      } else {
+        cargarTorneos();
+      }
+    }, 10000);
+  }
+
+  // Cargar lista de torneos al iniciar
+  async function cargarTorneos() {
+    const res = await fetch('/api/torneos');
+    const torneos = await res.json();
+    const div = document.getElementById('lista-torneos');
+
+    if (torneos.length === 0) {
+      div.innerHTML = '<p class="empty">No hay torneos registrados.</p>';
+      return;
+    }
+
+    div.innerHTML = torneos.map(t => `
+      <div class="card" onclick="verDetalle(${t.id_torneo}, '${t.nombre}')">
+        <h3>${t.nombre}</h3>
+        <p>
+          <span class="badge">${t.videojuego}</span>
+          <span class="badge">💰 $${Number(t.price_pool_usd).toLocaleString()}</span>
+          <span class="badge">👥 Máx. ${t.max_equipos} equipos</span>
+        </p>
+        <p style="margin-top:8px">📅 ${t.fecha_inicio} → ${t.fecha_fin}</p>
+      </div>
+    `).join('');
+  }
+
+  async function verDetalle(id, nombre) {
+    torneoActual = id;
+    document.getElementById('vista-lista').style.display = 'none';
+    document.getElementById('vista-detalle').style.display = 'block';
+    document.getElementById('torneo-titulo').textContent = nombre;
+
+    // Tabla de posiciones
+    const posRes = await fetch(`/api/torneos/${id}/posiciones`);
+    const posiciones = await posRes.json();
+    const tablaDiv = document.getElementById('tabla-posiciones');
+    if (posiciones.length === 0) {
+      tablaDiv.innerHTML = '<p class="empty">No hay partidas de grupos registradas.</p>';
+    } else {
+      tablaDiv.innerHTML = `
+        <table>
+          <thead><tr><th>#</th><th>Equipo</th><th>J</th><th>G</th><th>E</th><th>P</th><th>Pts</th></tr></thead>
+          <tbody>${posiciones.map((p, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${p.equipo}</td>
+              <td>${p.jugadas}</td>
+              <td>${p.ganadas}</td>
+              <td>${p.empatadas}</td>
+              <td>${p.perdidas}</td>
+              <td><strong>${p.puntos}</strong></td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+    }
+
+    // Partidas
+    const partRes = await fetch(`/api/torneos/${id}/partidas`);
+    const partidas = await partRes.json();
+    const partDiv = document.getElementById('lista-partidas');
+    if (partidas.length === 0) {
+      partDiv.innerHTML = '<p class="empty">No hay partidas registradas.</p>';
+    } else {
+      partDiv.innerHTML = `
+        <table>
+          <thead><tr><th>Fase</th><th>Equipo A</th><th>Resultado</th><th>Equipo B</th><th>Fecha</th></tr></thead>
+          <tbody>${partidas.map(p => `
+            <tr>
+              <td><span class="badge">${p.fase}</span></td>
+              <td>${p.equipo_a}</td>
+              <td><strong>${p.puntaje_equipo_a} - ${p.puntaje_equipo_b}</strong></td>
+              <td>${p.equipo_b}</td>
+              <td>${formatearFechaHora(p.fecha_hora)}</td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+    }
+
+    // Equipos y sponsors
+    const esRes = await fetch(`/api/torneos/${id}/equipos-sponsors`);
+    const es = await esRes.json();
+
+    const eqDiv = document.getElementById('lista-equipos');
+    eqDiv.innerHTML = es.equipos.length === 0
+      ? '<p class="empty">Sin equipos inscritos.</p>'
+      : `<table><thead><tr><th>Equipo</th></tr></thead><tbody>
+          ${es.equipos.map(e => `<tr><td>${e.nombre}</td></tr>`).join('')}
+         </tbody></table>`;
+
+    const spDiv = document.getElementById('lista-sponsors');
+    spDiv.innerHTML = es.sponsors.length === 0
+      ? '<p class="empty">Sin sponsors registrados.</p>'
+      : `<table>
+          <thead><tr><th>Sponsor</th><th>Industria</th><th>Aporte</th></tr></thead>
+          <tbody>${es.sponsors.map(s => `
+            <tr><td>${s.nombre}</td><td>${s.industria}</td><td>$${Number(s.monto_usd).toLocaleString()}</td></tr>
+          `).join('')}</tbody>
+         </table>`;
+  }
+
+  function volverLista() {
+    document.getElementById('vista-detalle').style.display = 'none';
+    document.getElementById('vista-lista').style.display = 'block';
+  }
+
+  cargarTorneos();
+  iniciarAutoRefresh();
+</script>
+</body>
+</html>

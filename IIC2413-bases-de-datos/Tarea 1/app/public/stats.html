@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Estadísticas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <span>🎮 TorneoApp</span>
+  <a href="index.html">Torneos</a>
+  <a href="stats.html" class="active">Estadísticas</a>
+  <a href="search.html">Búsqueda</a>
+  <a href="sponsors.html">Sponsors</a>
+  <a href="inscripcion.html">Inscripción</a>
+</nav>
+
+<div class="container">
+  <h1>📈 Estadísticas de Torneo</h1>
+
+  <div class="form-group">
+    <label>Selecciona un torneo:</label>
+    <select id="sel-torneo" onchange="cargarEstadisticas()">
+      <option value="">-- Elige un torneo --</option>
+    </select>
+  </div>
+
+  <div id="contenido" style="display:none">
+    <!-- Ranking -->
+    <h2>🥇 Ranking de jugadores (mín. 2 partidas)</h2>
+    <div id="ranking"></div>
+
+    <!-- Evolución por fase -->
+    <h2>📊 Evolución por fase</h2>
+    <div class="form-group">
+      <label>Selecciona un equipo:</label>
+      <select id="sel-equipo" onchange="cargarEvolucion()">
+        <option value="">-- Elige un equipo --</option>
+      </select>
+    </div>
+    <div id="evolucion"></div>
+  </div>
+</div>
+
+<script>
+  let autoRefreshActivo = false;
+
+  async function init() {
+    const res = await fetch('/api/torneos');
+    const torneos = await res.json();
+    const sel = document.getElementById('sel-torneo');
+    torneos.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id_torneo;
+      opt.textContent = t.nombre;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function cargarEstadisticas() {
+    const id = document.getElementById('sel-torneo').value;
+    if (!id) { document.getElementById('contenido').style.display = 'none'; return; }
+    document.getElementById('contenido').style.display = 'block';
+
+    const equipoSeleccionado = document.getElementById('sel-equipo').value;
+    document.getElementById('evolucion').innerHTML = '';
+
+    // Ranking
+    const res = await fetch(`/api/estadisticas/${id}/ranking`);
+    const ranking = await res.json();
+    const div = document.getElementById('ranking');
+    if (ranking.length === 0) {
+      div.innerHTML = '<p class="empty">Sin datos suficientes (se requieren mín. 2 partidas por jugador).</p>';
+    } else {
+      div.innerHTML = `
+        <table>
+          <thead><tr><th>#</th><th>Gamertag</th><th>Equipo</th><th>KOs</th><th>Restarts</th><th>Assists</th><th>Ratio KO/R</th></tr></thead>
+          <tbody>${ranking.map((j, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${j.gamertag}</td>
+              <td>${j.equipo}</td>
+              <td>${j.total_kos}</td>
+              <td>${j.total_restarts}</td>
+              <td>${j.total_assists}</td>
+              <td><strong>${j.ratio}</strong></td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+    }
+
+    // Cargar equipos del torneo
+    const eqRes = await fetch(`/api/estadisticas/${id}/equipos`);
+    const equipos = await eqRes.json();
+    const sel = document.getElementById('sel-equipo');
+    sel.innerHTML = '<option value="">-- Elige un equipo --</option>';
+    equipos.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id_equipo;
+      opt.textContent = e.nombre;
+      sel.appendChild(opt);
+    });
+    if (equipoSeleccionado && equipos.some(e => String(e.id_equipo) === String(equipoSeleccionado))) {
+      sel.value = equipoSeleccionado;
+      await cargarEvolucion();
+    }
+  }
+
+  async function cargarEvolucion() {
+    const id = document.getElementById('sel-torneo').value;
+    const equipo = document.getElementById('sel-equipo').value;
+    if (!equipo) return;
+
+    const res = await fetch(`/api/estadisticas/${id}/evolucion?equipo=${equipo}`);
+    const datos = await res.json();
+    const div = document.getElementById('evolucion');
+
+    if (datos.length === 0) {
+      div.innerHTML = '<p class="empty">No hay datos para este equipo en este torneo.</p>';
+      return;
+    }
+
+    div.innerHTML = `
+      <table>
+        <thead><tr><th>Fase</th><th>Avg KOs</th><th>Avg Restarts</th><th>Avg Assists</th></tr></thead>
+        <tbody>${datos.map(d => `
+          <tr>
+            <td><span class="badge">${d.fase}</span></td>
+            <td>${d.avg_kos}</td>
+            <td>${d.avg_restarts}</td>
+            <td>${d.avg_assists}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+  }
+
+  function iniciarAutoRefresh() {
+    if (autoRefreshActivo) return;
+    autoRefreshActivo = true;
+
+    setInterval(() => {
+      if (document.hidden) return;
+      if (document.getElementById('sel-torneo').value) {
+        cargarEstadisticas();
+      }
+    }, 10000);
+  }
+
+  init();
+  iniciarAutoRefresh();
+</script>
+</body>
+</html>

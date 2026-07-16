@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inscripción</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <span>🎮 TorneoApp</span>
+  <a href="index.html">Torneos</a>
+  <a href="stats.html">Estadísticas</a>
+  <a href="search.html">Búsqueda</a>
+  <a href="sponsors.html">Sponsors</a>
+  <a href="inscripcion.html" class="active">Inscripción</a>
+</nav>
+
+<div class="container">
+  <h1>📋 Formulario de Inscripción</h1>
+  <p style="color:#9ca3af; margin-bottom:24px">Inscribe un equipo en un torneo disponible.</p>
+
+  <div class="form-group">
+    <label>Equipo:</label>
+    <select id="sel-equipo">
+      <option value="">-- Elige un equipo --</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>Torneo:</label>
+    <select id="sel-torneo">
+      <option value="">-- Elige un torneo --</option>
+    </select>
+  </div>
+
+  <button onclick="inscribir()">Inscribir equipo</button>
+
+  <div id="mensaje"></div>
+</div>
+
+<script>
+  let autoRefreshActivo = false;
+
+  async function init() {
+    const idEquipoActual = document.getElementById('sel-equipo').value;
+    const idTorneoActual = document.getElementById('sel-torneo').value;
+
+    const [eqRes, torRes] = await Promise.all([
+      fetch('/api/equipos'),
+      fetch('/api/torneos')
+    ]);
+    const equipos = await eqRes.json();
+    const torneos = await torRes.json();
+
+    const selE = document.getElementById('sel-equipo');
+    selE.innerHTML = '<option value="">-- Elige un equipo --</option>';
+    equipos.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id_equipo;
+      opt.textContent = e.nombre;
+      selE.appendChild(opt);
+    });
+    if (idEquipoActual && equipos.some(e => String(e.id_equipo) === String(idEquipoActual))) {
+      selE.value = idEquipoActual;
+    }
+
+    const selT = document.getElementById('sel-torneo');
+    selT.innerHTML = '<option value="">-- Elige un torneo --</option>';
+    torneos.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id_torneo;
+      opt.textContent = `${t.nombre} (${t.videojuego})`;
+      selT.appendChild(opt);
+    });
+    if (idTorneoActual && torneos.some(t => String(t.id_torneo) === String(idTorneoActual))) {
+      selT.value = idTorneoActual;
+    }
+  }
+
+  async function inscribir() {
+    const id_equipo = document.getElementById('sel-equipo').value;
+    const id_torneo = document.getElementById('sel-torneo').value;
+    const msgDiv = document.getElementById('mensaje');
+
+    if (!id_equipo || !id_torneo) {
+      msgDiv.innerHTML = '<div class="msg-error">⚠️ Debes seleccionar un equipo y un torneo.</div>';
+      return;
+    }
+
+    const res = await fetch('/api/inscribir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_equipo, id_torneo })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      msgDiv.innerHTML = `<div class="msg-ok">✅ ${data.mensaje}</div>`;
+    } else {
+      msgDiv.innerHTML = `<div class="msg-error">❌ ${data.error}</div>`;
+    }
+  }
+
+  function iniciarAutoRefresh() {
+    if (autoRefreshActivo) return;
+    autoRefreshActivo = true;
+
+    setInterval(() => {
+      if (document.hidden) return;
+      init();
+    }, 15000);
+  }
+
+  init();
+  iniciarAutoRefresh();
+</script>
+</body>
+</html>
