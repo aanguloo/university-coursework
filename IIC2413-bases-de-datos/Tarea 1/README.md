@@ -1,9 +1,5 @@
 
 # Tarea 1: Base datos
-## integrantes:
-- **André Angulo** ✨  -2421003j
-- **Fernanda Miranda** ✨ -24209716
-- **Catalina Reyes** ✨ -24645516
 
 ## Requisitos previos
 - Tener instalado `Node.js`.
