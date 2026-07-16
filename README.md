@@ -17,4 +17,4 @@ Python · C · PostgreSQL · NumPy/Pandas · PyQt5 ·
 
 ---
 *Pontificia Universidad Católica de Chile*
-# university-coursework
+# University Coursework
